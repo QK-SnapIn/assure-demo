@@ -5,7 +5,7 @@
     "buildCommand": "npm install && npx prisma generate --schema prisma/schema.prisma && npm run build"
   },
   "deploy": {
-    "startCommand": "npx prisma migrate deploy --schema prisma/schema.prisma && npx tsx prisma/seed.ts && node dist/index.js",
+    "startCommand": "(npx prisma migrate resolve --schema prisma/schema.prisma --rolled-back 20260511_init || true) && npx prisma migrate deploy --schema prisma/schema.prisma && npx tsx prisma/seed.ts && node dist/index.js",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE"
