@@ -23,6 +23,19 @@ invoicesRouter.get('/', async (req, res, next) => {
   }
 })
 
+// GET /api/invoices/by-policy/:policyId — invoices for a given policy
+invoicesRouter.get('/by-policy/:policyId', async (req, res, next) => {
+  try {
+    const invoices = await prisma.invoice.findMany({
+      where: { policyId: req.params.policyId },
+      orderBy: { due: 'desc' },
+    })
+    res.json(invoices)
+  } catch (e) {
+    next(e)
+  }
+})
+
 // GET /api/invoices/:id
 invoicesRouter.get('/:id', async (req, res, next) => {
   try {
