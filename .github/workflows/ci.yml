@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate --schema apps/backend/prisma/schema.prisma
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ci?schema=public"
+      - name: Lint
+        run: npm run lint --if-present
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ci?schema=public"
+          JWT_SECRET: "ci-test-secret-minimum-16-chars"
+          PORT: "8080"
+          CORS_ORIGIN: "http://localhost:5173"
+          NODE_ENV: "development"

@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  AGENCY_ADMIN
+  PRODUCER
+  CSR
+  UNDERWRITER
+  ADJUSTER
+  POLICYHOLDER
+  READ_ONLY
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  agency       String   @default("")
+  npn          String?
+  status       String   @default("Active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  policies  Policy[]  @relation("AgentPolicies")
+  claims    Claim[]   @relation("AdjusterClaims")
+  referrals Referral[] @relation("AgentReferrals")
+
+  @@map("users")
+}
+
+model Policy {
+  id             String    @id
+  insured        String
+  dba            String?
+  line           String
+  form           String
+  state          String
+  city           String
+  effective      DateTime?
+  expiration     DateTime?
+  premium        Decimal   @db.Decimal(12, 2)
+  occLimit       Int       @map("occ_limit")
+  aggLimit       Int       @map("agg_limit")
+  abuseOccLimit  Int?      @map("abuse_occ_limit")
+  abuseAggLimit  Int?      @map("abuse_agg_limit")
+  retroDate      DateTime? @map("retro_date")
+  headcount      Int?
+  bedCount       Int?      @map("bed_count")
+  payroll        Decimal?  @db.Decimal(14, 2)
+  status         String
+  agentUserId    String?   @map("agent_user_id")
+
+  agent    User?     @relation("AgentPolicies", fields: [agentUserId], references: [id])
+  claims   Claim[]
+  invoices Invoice[]
+
+  @@map("policies")
+}
+
+model Claim {
+  id            String   @id
+  policyId      String   @map("policy_id")
+  insured       String
+  dol           DateTime
+  reported      DateTime
+  cause         String
+  lossType      String   @map("loss_type")
+  status        String
+  reserve       Decimal  @db.Decimal(12, 2)
+  paid          Decimal  @db.Decimal(12, 2)
+  adjusterUserId String?  @map("adjuster_user_id")
+  severity      String
+  counsel       String?
+
+  policy   Policy @relation(fields: [policyId], references: [id])
+  adjuster User?  @relation("AdjusterClaims", fields: [adjusterUserId], references: [id])
+
+  @@map("claims")
+}
+
+model Invoice {
+  id       String   @id
+  policyId String   @map("policy_id")
+  insured  String
+  issued   DateTime
+  due      DateTime
+  amount   Decimal  @db.Decimal(12, 2)
+  balance  Decimal  @db.Decimal(12, 2)
+  status   String
+
+  policy Policy @relation(fields: [policyId], references: [id])
+
+  @@map("invoices")
+}
+
+model Referral {
+  id          String   @id
+  quoteId     String   @map("quote_id")
+  insured     String
+  line        String
+  state       String
+  premium     Decimal  @db.Decimal(12, 2)
+  reason      String
+  submitted   DateTime
+  agentUserId String?  @map("agent_user_id")
+  priority    String
+  status      String   @default("Pending")
+
+  agent User? @relation("AgentReferrals", fields: [agentUserId], references: [id])
+
+  @@map("referrals")
+}
+
+model Commission {
+  id          Int     @id @default(autoincrement())
+  lineGroup   String  @unique @map("line_group")
+  newBizPct   Decimal @db.Decimal(5, 2) @map("new_biz_pct")
+  renewalPct  Decimal @db.Decimal(5, 2) @map("renewal_pct")
+
+  @@map("commissions")
+}
+
+model Permission {
+  id           Int     @id @default(autoincrement())
+  feature      String
+  agencyAdmin  Boolean @map("agency_admin")
+  producer     Boolean
+  csr          Boolean
+  uw           Boolean
+  adjuster     Boolean
+  readonly     Boolean
+
+  @@map("permissions")
+}
